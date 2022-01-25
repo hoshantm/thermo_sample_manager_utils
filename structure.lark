@@ -1,0 +1,223 @@
+// Author: Hoshan, Tarik M
+//
+// Lark grammar used to parse Thermo SampleManager structure.txt file.
+// This is an initial version that needs to be further refined to ensure the parsing behavior
+// matches SampleManager parsing rules. Some TODO items indicate some spots that need to be
+// looked into. Views SQL statements are taken as is without parsing.
+
+structure: option_sections entity_definitions
+option_sections: option_section*
+option_section: SECTION_NAME options _SEMI_COLUMN
+SECTION_NAME: TABLE_DEFAULTS | INDEX_DEFAULTS
+TABLE_DEFAULTS: "table_defaults"
+INDEX_DEFAULTS: "index_defaults"
+?options: option*
+option: OPTION_NAME OPTION_VALUE
+OPTION_NAME: NAME
+OPTION_VALUE: ESCAPED_STRING | BOOLEAN
+
+entity_definitions: (table_definition|view_definition|sequence_clause)*
+
+// TODO: Major should come before minor. However, this might not be necessarily true
+sequence_clause: SEQUENCE SEQUENCE_NAME MAJOR ESCAPED_STRING MINOR ESCAPED_STRING _SEMI_COLUMN
+SEQUENCE: "sequence"i
+SEQUENCE_NAME: NAME
+MAJOR: "major"i
+MINOR: "minor"i
+
+view_definition: view_header field_definitions select_clause*
+// TODO: Do not use table options as view options. Create view specific options.
+view_header: VIEW VIEW_NAME table_options on_table? _SEMI_COLUMN
+on_table: "on_table"i TABLE_NAME (_COMMA TABLE_NAME)*
+table_options: table_option*
+VIEW: "view"i
+VIEW_NAME: NAME
+select_clause: ("select_clause"i | "oracle_specific_select"i | "sqlserver_specific_select"i) SELECT_STATEMENT _SEMI_COLUMN
+// TODO: Properly parse select statement or at least handle the case where a
+// semicolumn would be part of the SQL statement (within a string for example)
+SELECT_STATEMENT: /[^;]+/
+
+table_definition: table_header field_definitions collection_definitions index_definitions
+table_header: TABLE TABLE_NAME table_options _SEMI_COLUMN
+TABLE_NAME: NAME
+// TODO: Using option as a drop-in replacement of table_option is quick and dirty. This should be replaced
+// with options specific to tables.
+table_option: ALIAS TABLE_ALIAS
+             | NOINDEX
+             | RENAME_TABLE TABLE_NAME
+             | PARENT_TABLE TABLE_NAME
+             | TABLESET NAME
+             | READONLY
+             | PARENT_VIEW VIEW_NAME
+             | OPTION_NAME OPTION_VALUE
+
+TABLE: "table"i
+TABLE_ALIAS: NAME
+NOINDEX: "noindex"i
+RENAME_TABLE: "rename_table"i
+PARENT_TABLE: "parent_table"i
+TABLESET: "tableset"i
+READONLY: "read_only"i
+PARENT_VIEW: "parent_view"
+
+field_definitions: field_definition*
+field_definition: "field"i FIELD_NAME field_options _SEMI_COLUMN
+field_options: field_option*
+field_option:  ALIAS field_alias
+              | DATATYPE field_type
+              | USED_FOR field_used_for
+              | LINKS_TO "parent"i? field_links_to
+              | PROMPT_TYPE FIELD_PROMPT_TYPE
+              | IDENTITIES
+              | ALLOWED_CHARACTERS ALLOWED_CHARACTERS_PATTERN
+              | LIBRARY ESCAPED_STRING
+              | ROUTINE (ESCAPED_STRING | ROUTINE_NAME)
+              | PROMPT_DESCRIPTION ESCAPED_STRING
+              | CHOOSE_TYPE CHOOSE_TYPE_NAME
+              | DEFAULT FIELD_DEFAULT_VALUE
+              | PHRASE_TYPE (NAME | ESCAPED_STRING)
+              | VALID
+              | FORMAT FIELD_FORMAT
+              | LOWER_LIMIT (SIGNED_NUMBER | ESCAPED_STRING)
+              | UPPER_LIMIT (SIGNED_NUMBER | ESCAPED_STRING)
+              | TRUE_WORD ESCAPED_STRING
+              | FALSE_WORD ESCAPED_STRING
+              | CASE_SENSITIVE
+              | DESCENDING
+              | READ_ONLY
+              | NOIDENTITIES
+
+CHOOSE_TYPE_NAME: NAME
+ALIAS: "alias"i
+DATATYPE: "datatype"i
+USED_FOR: "used_for"i
+LINKS_TO: "links_to"i
+PROMPT_TYPE: "prompt_type"i
+IDENTITIES: "identities"i
+ALLOWED_CHARACTERS: "allowed_characters"i
+LIBRARY: "library"i
+ROUTINE: "routine"i
+PROMPT_DESCRIPTION: "prompt_description"i
+CHOOSE_TYPE: "choose_type"i
+DEFAULT: "default"i
+PHRASE_TYPE: "phrase_type"i
+VALID: "valid"
+FORMAT: "format"i
+LOWER_LIMIT: "lower_limit"i
+UPPER_LIMIT: "upper_limit"i
+TRUE_WORD: "true_word"i
+FALSE_WORD: "false_word"i
+CASE_SENSITIVE: "case_sensitive"i
+DESCENDING: "descending"i
+READ_ONLY: "read_only"i
+NOIDENTITIES: "noidentities"i
+ROUTINE_NAME: NAME
+
+field_alias: FIELD_ALIAS (_COMMA FIELD_ALIAS)*
+?field_type: TYPE_IDENTITY ("(" FIELD_SIZE ")")?
+           | TYPE_TEXT ("(" FIELD_SIZE ")")?
+           | TYPE_DATE
+           | TYPE_BOOLEAN
+           | TYPE_PACKED_DECIMAL
+           | TYPE_INTEGER
+           | TYPE_REAL
+           | TYPE_INTERVAL
+           | TYPE_BLOB
+           | TYPE_GUID
+
+TYPE_IDENTITY: "identity"i
+TYPE_TEXT: "text"i
+TYPE_DATE:"date"i
+TYPE_BOOLEAN: "boolean"i
+TYPE_PACKED_DECIMAL: "packed_decimal"i
+TYPE_INTEGER: "integer"i
+TYPE_REAL: "real"i
+TYPE_INTERVAL: "interval"i
+TYPE_BLOB: "blob"i
+TYPE_GUID: "guid"i
+FIELD_SIZE: INT
+FIELD_ALIAS: NAME
+
+?field_used_for: field_use (_COMMA field_use)*
+field_use: SECURITY_ID
+            | UNIQUE_KEY
+            | DISPLAY_BROWSE "(" FIELD_SIZE ")"
+            | FIELD_USE_NAME
+
+SECURITY_ID: "security_id"i
+UNIQUE_KEY: "unique_key"i
+DISPLAY_BROWSE: "display_browse"i
+FIELD_USE_NAME: NAME
+
+field_links_to: TABLE_NAME "." FIELD_NAME ("as"i FIELD_ALIAS)?
+FIELD_PROMPT_TYPE: PHRASE
+                   | USER_DEFINED
+                   | CHOOSE
+PHRASE: "phrase"i
+USER_DEFINED: "user_defined"i
+CHOOSE: "choose"i
+
+FIELD_NAME: NAME
+ALIAS_NAME: NAME
+FIELD_FORMAT: INT | ESCAPED_STRING | NUMBER
+FIELD_DEFAULT_VALUE: ESCAPED_STRING | SIGNED_NUMBER | "NULL"i | NAME
+
+collection_definitions: collection_definition*
+// TODO: change NAME to specific terminals that have a meaningful name.
+collection_definition: "collection"i COLLECTION_NAME "on"i COLLECTION_ON "using"i COLLECTION_USING _SEMI_COLUMN
+COLLECTION_NAME: NAME
+COLLECTION_ON: NAME
+COLLECTION_USING: NAME
+index_definitions: index_definition*
+index_definition: INDEX INDEX_NAME UNIQUE? "on" index_fields index_options _SEMI_COLUMN
+index_options: option*
+UNIQUE: "unique"i
+INDEX: "index"i
+index_fields: index_field_definition (_COMMA index_field_definition)*
+index_field_definition: INDEX_FIELD_NAME
+INDEX_FIELD_NAME: NAME
+INDEX_NAME: NAME
+
+// Terminals
+_STRING_INNER: /.*?/
+_STRING_ESC_INNER: _STRING_INNER /(?<!\\)(\\\\)*?/
+ESCAPED_STRING : "'" _STRING_ESC_INNER "'"
+
+DIGIT: "0".."9"
+LCASE_LETTER: "a".."z"
+UCASE_LETTER: "A".."Z"
+BOOLEAN: /TRUE|FALSE/
+
+//
+// Numbers
+//
+
+HEXDIGIT: "a".."f"|"A".."F"|DIGIT
+
+INT: DIGIT+
+SIGNED_INT: ["+"|"-"] INT
+DECIMAL: INT "." INT? | "." INT
+
+// float = /-?\d+(\.\d+)?([eE][+-]?\d+)?/
+_EXP: ("e"|"E") SIGNED_INT
+FLOAT: INT _EXP | DECIMAL _EXP?
+SIGNED_FLOAT: ["+"|"-"] FLOAT
+
+NUMBER: FLOAT | INT
+SIGNED_NUMBER: ["+"|"-"] NUMBER
+
+LETTER: UCASE_LETTER | LCASE_LETTER
+WORD: LETTER+
+
+NAME: ("_"|LETTER) ("_"|LETTER|DIGIT)*
+
+
+WS: /[ \t\f\r\n]/+
+_SEMI_COLUMN: ";"
+_COMMA: ","
+COMMENT: "{" /(.|\n)*?/ "}"
+// TODO: Quick and dirty handling of allowed characters. This should be closely reviewed to handle supported patterns.
+ALLOWED_CHARACTERS_PATTERN: "'" _STRING_INNER "'"
+
+%ignore WS
+%ignore COMMENT
