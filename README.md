@@ -10,11 +10,11 @@ Requirements:
 
 The following are the commands that can be used from the command prompt:
 
-To parse a structure.txt file and verify that there are no errors in the file:
+To parse a structure.txt file and verify that there are no errors in the file:  
 python structure.py parse structure.txt
 
-To compare two structure.txt files and get the result as a tree diff in a text file:
+To compare two structure.txt files and get the result as a tree diff in a text file:  
 python compare structure1.txt structure2.txt -t output.txt
 
-To compare two structure.txt files and get the result as a table in an Excel workbook:
+To compare two structure.txt files and get the result as a table in an Excel workbook:  
 python compare structure1.txt structure2.txt -e output.xlsx
