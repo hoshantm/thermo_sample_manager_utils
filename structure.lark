@@ -18,7 +18,7 @@ OPTION_VALUE: ESCAPED_STRING | BOOLEAN
 
 entity_definitions: (table_definition|view_definition|sequence_clause)*
 
-// TODO: Major should come before minor. However, this might not be necessarily true
+// TODO: major is assumed to preceed minor. However, this might not be necessarily true
 sequence_clause: SEQUENCE SEQUENCE_NAME MAJOR ESCAPED_STRING MINOR ESCAPED_STRING _SEMI_COLUMN
 SEQUENCE: "sequence"i
 SEQUENCE_NAME: NAME
@@ -34,7 +34,7 @@ VIEW: "view"i
 VIEW_NAME: NAME
 select_clause: ("select_clause"i | "oracle_specific_select"i | "sqlserver_specific_select"i) SELECT_STATEMENT _SEMI_COLUMN
 // TODO: Properly parse select statement or at least handle the case where a
-// semicolumn would be part of the SQL statement (within a string for example)
+// semicolon would be part of the SQL statement (within a string for example)
 SELECT_STATEMENT: /[^;]+/
 
 table_definition: table_header field_definitions collection_definitions index_definitions
